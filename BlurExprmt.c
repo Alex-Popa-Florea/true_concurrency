@@ -88,8 +88,8 @@
     tmp.img = copy_image(pic->img);
     tmp.width = pic->width;
     tmp.height = pic->height;  
-    pthread_t threads[tmp.width - 2];
-    struct task_args args[tmp.width - 2];
+    pthread_t *threads = malloc((tmp.width - 2) * sizeof(pthread_t));
+    struct task_args *args = malloc((tmp.width - 2) * sizeof(struct task_args));
     for(int i = 1 ; i < tmp.width - 1; i++){
       args[i - 1].pic = pic;
       args[i - 1].tmp = tmp;
@@ -105,6 +105,8 @@
     }
 
     clear_picture(&tmp);
+    free(threads);
+    free(args);
   }
 
   void blur_row_by_row(struct picture *pic){
@@ -112,8 +114,8 @@
     tmp.img = copy_image(pic->img);
     tmp.width = pic->width;
     tmp.height = pic->height;  
-    pthread_t threads[tmp.height - 2];
-    struct task_args args[tmp.height - 2];
+    pthread_t *threads = malloc((tmp.height - 2) * sizeof(pthread_t));
+    struct task_args *args = malloc((tmp.height - 2) * sizeof(struct task_args));
     for(int j = 1 ; j < tmp.height - 1; j++){
       args[j - 1].pic = pic;
       args[j - 1].tmp = tmp;
@@ -129,6 +131,8 @@
     }
 
     clear_picture(&tmp);
+    free(threads);
+    free(args);
   }
 
   void blur_pixel_by_pixel(struct picture *pic){
@@ -309,7 +313,7 @@
     average[2] = sum / repeats;
     sum = 0;
     fprintf(f, "Average time for column by column: %lf seconds\n\n", average[2]);
-    save_picture_to_file(pic, "base_blur.jpg");
+    save_picture_to_file(pic, "column_by_column_blur.jpg");
 
     for (int i = 0; i < repeats; i++){
       init_picture_from_file(pic, argv[1]);
@@ -337,7 +341,7 @@
     average[4] = sum / repeats;
     sum = 0;
     fprintf(f, "Average time for 4 sectors: %lf seconds\n\n", average[4]);
-    save_picture_to_file(pic, "sector_by_sector_blur.jpg");
+    save_picture_to_file(pic, "small_sector_by_sector_blur.jpg");
 
     for (int i = 0; i < repeats; i++){
       init_picture_from_file(pic, argv[1]);
@@ -351,7 +355,7 @@
     average[5] = sum / repeats;
     sum = 0;
     fprintf(f, "Average time for 100 sectors: %lf seconds\n\n", average[5]);
-    save_picture_to_file(pic, "sector_by_sector_blur.jpg");
+    save_picture_to_file(pic, "large_sector_by_sector_blur.jpg");
 
 
     printf("\nResults after %d repeats each: \n\n", repeats);
