@@ -24,7 +24,7 @@ PicStore.o: Utils.h Picture.h PicStore.h PicStore.c
 
 ConcMain.o: ConcMain.c Utils.h Picture.h PicProcess.h PicStore.h 
 
-BlurExprmt.o: BlurExprmt.c Utils.h Picture.h PicProcess.h
+BlurExprmt.o: BlurExprmt.c BlurExprmt.h Utils.h Picture.h PicProcess.h
 
 Compare.o: Compare.c Utils.h Picture.h
 

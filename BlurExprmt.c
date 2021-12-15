@@ -5,21 +5,41 @@
 #include "Picture.h"
 #include "PicProcess.h"
 #include <time.h>
+#include <math.h>
+#include "BlurExprmt.h"
 
 #define BLUR_REGION_SIZE 9
-#define BILLION  1000000000L;
-#define THREADLIMIT 15;
+#define BILLION  1000000000L
+#define THREADLIMIT 10000
 // ---------- MAIN PROGRAM ---------- \\
 
-  struct task_args {
-    struct picture *pic;
-    struct picture tmp;
-    int i_start;
-    int i_end;
-    int j_start;
-    int j_end;
-  };    
 
+  list_t task_list;
+
+  pthread_mutex_t task_list_lock;
+  
+  struct task_args *list_pop(list_t *list) {
+    list_elem_t *old_head = list->head;
+    if (old_head == NULL) {
+      return NULL;
+    }
+    struct task_args *task = old_head->task;
+    list->head = old_head->next;
+    free(old_head);
+    list->size--;
+    return task;
+  }
+
+  void list_push(list_t *list, struct task_args *task) {
+    list_elem_t *new_head = malloc(sizeof(list_elem_t));
+    if (new_head == NULL) {
+      return;
+    }
+    new_head->next = list->head;
+    new_head->task = task;
+    list->head = new_head;
+    list->size++;
+  }
 
   void *blur_chunk(void *args_ptr){
     struct task_args *args = (struct task_args *) args_ptr;
@@ -46,8 +66,22 @@
         set_pixel(args->pic, i, j, &rgb);
       }
     }
+    args->completed = true;
   }
 
+  void *do_tasks() {
+    pthread_mutex_lock(&task_list_lock);
+    while(task_list.size != 0) {
+      struct task_args *task = list_pop(&task_list);
+      if (task == NULL) {
+        break;
+      }
+      pthread_mutex_unlock(&task_list_lock);
+      blur_chunk(task);
+      pthread_mutex_lock(&task_list_lock);
+    }
+    pthread_mutex_unlock(&task_list_lock);
+  }
 
   void blur_column_by_column(struct picture *pic){
     struct picture tmp;
@@ -88,7 +122,6 @@
       args[j - 1].j_start = j;
       args[j - 1].j_end = j;
 
-
       pthread_create(&threads[j - 1], NULL, blur_chunk, &args[j - 1]);
     }
     for(int j = 1; j < tmp.height - 1; j++){
@@ -100,39 +133,39 @@
 
   void blur_pixel_by_pixel(struct picture *pic){
     struct picture tmp;
-    int m = 0;
     tmp.img = copy_image(pic->img);
     tmp.width = pic->width;
     tmp.height = pic->height;  
-    pthread_t *threads = malloc((tmp.width - 2) * (tmp.height - 2) * sizeof(pthread_t));
-    struct task_args *args = malloc((tmp.width - 2) * (tmp.height - 2) * sizeof(struct task_args));
+    pthread_t *threads = malloc(THREADLIMIT * sizeof(pthread_t));
 
     for(int i = 1; i < tmp.width - 1; i++){
       for(int j = 1; j < tmp.height - 1; j++){
-        args[(i - 1) * (tmp.height - 2) + j - 1].pic = pic;
-        args[(i - 1) * (tmp.height - 2) + j - 1].tmp = tmp;
-        args[(i - 1) * (tmp.height - 2) + j - 1].i_start = i;
-        args[(i - 1) * (tmp.height - 2) + j - 1].i_end = i;
-        args[(i - 1) * (tmp.height - 2) + j - 1].j_start = j;
-        args[(i - 1) * (tmp.height - 2) + j - 1].j_end = j;
+        struct task_args *task = malloc(sizeof(struct task_args));
+        task->pic = pic;
+        task->tmp = tmp;
+        task->i_start = i;
+        task->i_end = i;
+        task->j_start = j;
+        task->j_end = j;
+        list_push(&task_list, task);
+      }
+    }
+    for (int i = 0; i < THREADLIMIT; i++){
+      pthread_create(&threads[i], NULL, do_tasks, NULL);
+    }
+    
+    for(int i = 0; i < THREADLIMIT; i++){
+      pthread_join(threads[i], NULL);
+    }
 
-        pthread_create(&threads[(i - 1) * (tmp.height - 2) + j - 1], NULL, blur_chunk, &args[(i - 1) * (tmp.height - 2) + j - 1]);
-        
-      }
-    }
-    for(int i = 1; i < tmp.width - 1; i++){
-      for(int j = 1; j < tmp.height - 1; j++){
-        pthread_join(threads[(i - 1) * (tmp.height - 2) + j - 1], NULL);
-      }
-    }
     free(threads);
-    free(args);
 
     clear_picture(&tmp);
   }
 
 
-  void blur_sector_by_sector(struct picture *pic, int split){
+  void blur_sector_by_sector(struct picture *pic, int sectors){
+    int split = sqrt(sectors);
     struct picture tmp;
     tmp.img = copy_image(pic->img);
     tmp.width = pic->width;
@@ -225,46 +258,126 @@
     struct picture *pic = malloc(sizeof(struct picture));
     struct timespec start;
     struct timespec end;
-    double accum;
+    double diff;
+    double sum;
+    double average[6];
     
-    init_picture_from_file(pic, argv[1]);
-    clock_gettime(CLOCK_REALTIME, &start);
-    blur_picture(pic);
-    clock_gettime(CLOCK_REALTIME, &end);
-    accum = ((double) (end.tv_sec - start.tv_sec)) + ((double) (end.tv_nsec - start.tv_nsec)) / (1000000000L);
-    printf( "base time: %lf seconds\n", accum );
+    int repeats = atoi(argv[3]);
+    FILE *f = fopen(argv[2], "w");
+    if (f == NULL){
+        printf("Error opening file!\n");
+        return -1;
+    }
+
+    for (int i = 0; i < repeats; i++){
+      init_picture_from_file(pic, argv[1]);
+      clock_gettime(CLOCK_REALTIME, &start);
+      blur_picture(pic);
+      clock_gettime(CLOCK_REALTIME, &end);
+      diff = ((double) (end.tv_sec - start.tv_sec)) + ((double) (end.tv_nsec - start.tv_nsec)) / BILLION;
+      fprintf(f, "Time in iteration %d for non-threaded: %lf seconds\n", i, diff);
+      sum += diff;
+    }
+    average[0] = sum / repeats;
+    sum = 0;
+    fprintf(f, "Average time for for non-threaded: %lf seconds\n\n", average[0]);
+    save_picture_to_file(pic, "base_blur.jpg");
     
-    init_picture_from_file(pic, argv[1]);
-    clock_gettime(CLOCK_REALTIME, &start);
-    blur_row_by_row (pic);
-    clock_gettime(CLOCK_REALTIME, &end);
-    accum = ((double) (end.tv_sec - start.tv_sec)) + ((double) (end.tv_nsec - start.tv_nsec)) / BILLION;
-    printf("row time: %lf seconds\n", accum );
+    for (int i = 0; i < repeats; i++){
+      init_picture_from_file(pic, argv[1]);
+      clock_gettime(CLOCK_REALTIME, &start);
+      blur_row_by_row(pic);
+      clock_gettime(CLOCK_REALTIME, &end);
+      diff = ((double) (end.tv_sec - start.tv_sec)) + ((double) (end.tv_nsec - start.tv_nsec)) / BILLION;
+      fprintf(f, "Time in iteration %d for row by row: %lf seconds\n", i, diff);
+      sum += diff;
+    }
+    average[1] = sum / repeats;
+    sum = 0;
+    fprintf(f, "Average time for for row by row: %lf seconds\n\n", average[1]);
+    save_picture_to_file(pic, "row_by_row_blur.jpg");
 
-    init_picture_from_file(pic, argv[1]);
-    clock_gettime(CLOCK_REALTIME, &start);
-    blur_column_by_column (pic);
-    clock_gettime(CLOCK_REALTIME, &end);
-    accum = ((double) (end.tv_sec - start.tv_sec)) + ((double) (end.tv_nsec - start.tv_nsec)) / BILLION;
-    printf( "column time: %lf seconds\n", accum );
+    for (int i = 0; i < repeats; i++){
+      init_picture_from_file(pic, argv[1]);
+      clock_gettime(CLOCK_REALTIME, &start);
+      blur_column_by_column(pic);
+      clock_gettime(CLOCK_REALTIME, &end);
+      diff = ((double) (end.tv_sec - start.tv_sec)) + ((double) (end.tv_nsec - start.tv_nsec)) / BILLION;
+      fprintf(f, "Time in iteration %d for column by column: %lf seconds\n", i, diff);
+      sum += diff;
+    }
+    average[2] = sum / repeats;
+    sum = 0;
+    fprintf(f, "Average time for column by column: %lf seconds\n\n", average[2]);
+    save_picture_to_file(pic, "base_blur.jpg");
 
-    init_picture_from_file(pic, argv[1]);
-    clock_gettime(CLOCK_REALTIME, &start);
-    blur_sector_by_sector (pic, 2);
-    clock_gettime(CLOCK_REALTIME, &end);
-    accum = ((double) (end.tv_sec - start.tv_sec)) + ((double) (end.tv_nsec - start.tv_nsec)) / BILLION;
-    printf( "sector time: %lf seconds\n", accum );
+    for (int i = 0; i < repeats; i++){
+      init_picture_from_file(pic, argv[1]);
+      clock_gettime(CLOCK_REALTIME, &start);
+      blur_pixel_by_pixel(pic);
+      clock_gettime(CLOCK_REALTIME, &end);
+      diff = ((double) (end.tv_sec - start.tv_sec)) + ((double) (end.tv_nsec - start.tv_nsec)) / BILLION;
+      fprintf(f, "Time in iteration %d for pixel by pixel: %lf seconds\n", i, diff);
+      sum += diff;
+    }
+    average[3] = sum / repeats;
+    sum = 0;
+    fprintf(f, "Average time for pixel by pixel: %lf seconds\n\n", average[3]);
+    save_picture_to_file(pic, "pixel_by_pixel_blur.jpg");
+    
+    for (int i = 0; i < repeats; i++){
+      init_picture_from_file(pic, argv[1]);
+      clock_gettime(CLOCK_REALTIME, &start);
+      blur_sector_by_sector(pic, 4);
+      clock_gettime(CLOCK_REALTIME, &end);
+      diff = ((double) (end.tv_sec - start.tv_sec)) + ((double) (end.tv_nsec - start.tv_nsec)) / BILLION;
+      fprintf(f, "Time in iteration %d for 4 sectors: %lf seconds\n", i, diff);
+      sum += diff;
+    }
+    average[4] = sum / repeats;
+    sum = 0;
+    fprintf(f, "Average time for 4 sectors: %lf seconds\n\n", average[4]);
+    save_picture_to_file(pic, "sector_by_sector_blur.jpg");
 
-    init_picture_from_file(pic, argv[1]);
-    clock_gettime(CLOCK_REALTIME, &start);
-    blur_pixel_by_pixel (pic);
-    clock_gettime(CLOCK_REALTIME, &end);
-    accum = ((double) (end.tv_sec - start.tv_sec)) + ((double) (end.tv_nsec - start.tv_nsec)) / BILLION;
-    printf( "pixel time: %lf seconds\n", accum );
+    for (int i = 0; i < repeats; i++){
+      init_picture_from_file(pic, argv[1]);
+      clock_gettime(CLOCK_REALTIME, &start);
+      blur_sector_by_sector(pic, 100);
+      clock_gettime(CLOCK_REALTIME, &end);
+      diff = ((double) (end.tv_sec - start.tv_sec)) + ((double) (end.tv_nsec - start.tv_nsec)) / BILLION;
+      fprintf(f, "Time in iteration %d for 100 sectors: %lf seconds\n", i, diff);
+      sum += diff;
+    }
+    average[5] = sum / repeats;
+    sum = 0;
+    fprintf(f, "Average time for 100 sectors: %lf seconds\n\n", average[5]);
+    save_picture_to_file(pic, "sector_by_sector_blur.jpg");
 
 
-    save_picture_to_file(pic, argv[2]);
+    printf("\nResults after %d repeats each: \n\n", repeats);
+    fprintf(f, "\nResults after %d repeats each: \n\n", repeats);
+    printf("Average time for for non-threaded: %lf seconds\n", average[0]);
+    fprintf(f, "Average time for for non-threaded: %lf seconds\n", average[0]);
+
+    printf("Average time for for row by row: %lf seconds\n", average[1]);
+    fprintf(f, "Average time for for row by row: %lf seconds\n", average[1]);
+
+    printf("Average time for column by column: %lf seconds\n", average[2]);
+    fprintf(f, "Average time for column by column: %lf seconds\n", average[2]);
+
+    printf("Average time for pixel by pixel: %lf seconds\n", average[3]);
+    fprintf(f, "Average time for pixel by pixel: %lf seconds\n", average[3]);
+
+    printf("Average time for 4 sectors: %lf seconds\n", average[4]);
+    fprintf(f, "Average time for 4 sectors: %lf seconds\n", average[4]);
+
+    printf("Average time for 100 sectors: %lf seconds\n", average[5]);
+    fprintf(f, "Average time for 100 sectors: %lf seconds\n", average[5]);
+
+    
+
     free(pic);
+    fclose(f);
 
     return 0;
   }
