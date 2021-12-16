@@ -14,6 +14,8 @@
     int j_end;
   };    
 
+  typedef void (*blur_func)();
+
   typedef struct list_elem {
     struct task_args *task; 
     struct list_elem *next;
