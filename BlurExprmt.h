@@ -12,7 +12,6 @@
     int i_end;
     int j_start;
     int j_end;
-    bool completed;
   };    
 
   typedef struct list_elem {

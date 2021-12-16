@@ -1,0 +1,103 @@
+
+Begining the Blur Experiment: 
+
+Sequential Implementation: 
+
+Time in iteration 0 for non-threaded: 0.558672 seconds
+Time in iteration 1 for non-threaded: 0.565035 seconds
+Time in iteration 2 for non-threaded: 0.547641 seconds
+Time in iteration 3 for non-threaded: 0.543925 seconds
+Time in iteration 4 for non-threaded: 0.548299 seconds
+Time in iteration 5 for non-threaded: 0.546330 seconds
+Time in iteration 6 for non-threaded: 0.545797 seconds
+Time in iteration 7 for non-threaded: 0.561596 seconds
+Time in iteration 8 for non-threaded: 0.543719 seconds
+Time in iteration 9 for non-threaded: 0.535330 seconds
+Average time for non-threaded: 0.549634 seconds
+
+
+Row by Row Implementation: 
+
+Time in iteration 0 for row by row: 0.097838 seconds
+Time in iteration 1 for row by row: 0.084383 seconds
+Time in iteration 2 for row by row: 0.081814 seconds
+Time in iteration 3 for row by row: 0.092051 seconds
+Time in iteration 4 for row by row: 0.092885 seconds
+Time in iteration 5 for row by row: 0.083788 seconds
+Time in iteration 6 for row by row: 0.080772 seconds
+Time in iteration 7 for row by row: 0.083378 seconds
+Time in iteration 8 for row by row: 0.084584 seconds
+Time in iteration 9 for row by row: 0.084568 seconds
+Average time for row by row: 0.086606 seconds
+
+
+Column by Column Implementation: 
+
+Time in iteration 0 for column by column: 0.098212 seconds
+Time in iteration 1 for column by column: 0.090677 seconds
+Time in iteration 2 for column by column: 0.103153 seconds
+Time in iteration 3 for column by column: 0.101541 seconds
+Time in iteration 4 for column by column: 0.109960 seconds
+Time in iteration 5 for column by column: 0.089498 seconds
+Time in iteration 6 for column by column: 0.097099 seconds
+Time in iteration 7 for column by column: 0.101582 seconds
+Time in iteration 8 for column by column: 0.102530 seconds
+Time in iteration 9 for column by column: 0.106035 seconds
+Average time for column by column: 0.100029 seconds
+
+
+Pixel by Pixel Implementation: 
+
+Time in iteration 0 for pixel by pixel: 0.415316 seconds
+Time in iteration 1 for pixel by pixel: 0.423366 seconds
+Time in iteration 2 for pixel by pixel: 0.442788 seconds
+Time in iteration 3 for pixel by pixel: 0.420856 seconds
+Time in iteration 4 for pixel by pixel: 0.446413 seconds
+Time in iteration 5 for pixel by pixel: 0.438502 seconds
+Time in iteration 6 for pixel by pixel: 0.450102 seconds
+Time in iteration 7 for pixel by pixel: 0.460056 seconds
+Time in iteration 8 for pixel by pixel: 0.467206 seconds
+Time in iteration 9 for pixel by pixel: 0.443812 seconds
+Average time for pixel by pixel: 0.440842 seconds
+
+
+Sector by Sector with 4 sectors Implementation: 
+
+Time in iteration 0 for 4 sectors: 0.182090 seconds
+Time in iteration 1 for 4 sectors: 0.178871 seconds
+Time in iteration 2 for 4 sectors: 0.170425 seconds
+Time in iteration 3 for 4 sectors: 0.166552 seconds
+Time in iteration 4 for 4 sectors: 0.168177 seconds
+Time in iteration 5 for 4 sectors: 0.174118 seconds
+Time in iteration 6 for 4 sectors: 0.166351 seconds
+Time in iteration 7 for 4 sectors: 0.162917 seconds
+Time in iteration 8 for 4 sectors: 0.157365 seconds
+Time in iteration 9 for 4 sectors: 0.185009 seconds
+Average time for sector by sector with 4 sectors: 0.171187 seconds
+
+
+Sector by Sector with 100 sectors Implementation: 
+
+Time in iteration 0 for 100 sectors: 0.076660 seconds
+Time in iteration 1 for 100 sectors: 0.082323 seconds
+Time in iteration 2 for 100 sectors: 0.079573 seconds
+Time in iteration 3 for 100 sectors: 0.080732 seconds
+Time in iteration 4 for 100 sectors: 0.084966 seconds
+Time in iteration 5 for 100 sectors: 0.080939 seconds
+Time in iteration 6 for 100 sectors: 0.079206 seconds
+Time in iteration 7 for 100 sectors: 0.080294 seconds
+Time in iteration 8 for 100 sectors: 0.079439 seconds
+Time in iteration 9 for 100 sectors: 0.079794 seconds
+Average time for sector by sector with 100 sectors: 0.080393 seconds
+
+
+Results after 10 repeats each: 
+
+Average time for non-threaded: 0.549634 seconds
+Average time for row by row: 0.086606 seconds
+Average time for column by column: 0.100029 seconds
+Average time for pixel by pixel: 0.440842 seconds
+Average time for sector by sector with 4 sectors: 0.171187 seconds
+Average time for sector by sector with 100 sectors: 0.080393 seconds
+
+All images were blurred correctly.
