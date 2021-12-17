@@ -125,6 +125,7 @@
     }
   }
 
+  // Wrapper used for thread pool, as void return type required.
   static void blur_chunk_thpool(void *args_ptr){
     blur_chunk(args_ptr);
   }
@@ -305,9 +306,9 @@
     Bluring function that does bluring in a sector by sector manner.
     The number of sectors is given in the sectors parameter, which has to
     be a square number, as the image will be split into equal rectangles.
-    The rectangles at the edges of the image will have a slightly smaller
-    size than the rest if the image width and height are not divisible by the
-    root of the number of sectors.
+    The rectangles at the edges of the image may have a slightly smaller
+    size than the other rectangles, if the image width and height are not
+    divisible by the root of the number of sectors.
   */
   static void blur_sector_by_sector(struct picture *pic, int sectors){
     int split = sqrt(sectors);
@@ -348,7 +349,7 @@
         j_end = j_end + (tmp.height / split) + 1;
         y++;
       }
-      
+      // Edge case when image width is not divisible by the split
       args[x * split + y].pic = pic;
       args[x * split + y].tmp = tmp;
       args[x * split + y].i_start = i_start;
@@ -366,6 +367,7 @@
       i_end = i_end + (tmp.width / split) + 1;
       x++;
     }
+    // Edge case when image height is not divisible by the split
     while (j_end < tmp.height - 1) {
       args[x * split + y].pic = pic;
       args[x * split + y].tmp = tmp;
@@ -380,7 +382,7 @@
       j_end = j_end + (tmp.height / split) + 1;
       y++;
     }
-    
+    // Edge case when image width and height are not divisible by the split
     args[x * split + y].pic = pic;
     args[x * split + y].tmp = tmp;
     args[x * split + y].i_start = i_start;
